@@ -1,13 +1,18 @@
 // importing dotenv for environment variables
 import dotenv from 'dotenv';
-//configuring dotenv to load environment variables from a.env file in the root directory
 dotenv.config();
 
+import {app} from './app.js';
 import connectDB from "./db/index.js";
 
 // Connect to MongoDB
-connectDB();
-
+connectDB()
+.then(()=>{
+    app.listen(process.env.PORT || 8000 , () => {
+        console.log(`Server running on port ${process.env.PORT}`);
+    })
+})
+.catch((err) => console.error("Failed to connect to MongoDB", err));
 
 
 
