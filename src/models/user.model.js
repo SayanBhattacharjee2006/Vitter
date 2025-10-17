@@ -30,7 +30,7 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
     coverImage: {
-      type: true,
+      type: String,
     },
     watchHistory: [
       {
