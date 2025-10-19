@@ -4,6 +4,7 @@ import { ApiResponce } from "../utils/ApiResponse.js";
 import User from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import JWT from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   // get user object using userId
@@ -484,6 +485,73 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
   )
 
 });
+
+const getWatchHistory = asyncHandler(async (req,res) => {
+  const user = await User.aggregate[
+    {
+      $match:{
+        _id : new mongoose.Types.ObjectId(req.user._id) //we need to use  mongoose.Types.ObjectId here to convert the string id to ObjectId
+        // we are using match to filter the user by their id
+        //here we telling get the user from User model whose _id is equal to req.user._id
+      }
+    },
+    {
+      $lookup:{
+        from: "videos",          
+        localField: "watchHistory",     
+        foreignField: "_id",         
+        as: "watchHistory",
+        //in each video object the have a owner field which is the id of the user who uploaded the video
+        // so we need to perform a lookup operation for each video object to get the owner details,but we dont need full details of the owner so we will perform a projection operation to get only the required fields
+        pipeline: [
+          {
+            $lookup:{
+              from:"users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              //now for each owner object we need to perform a projection operation to get only the required fields
+              pipeline: [
+                {
+                  $project:{
+                    username: 1,
+                    fullName: 1,
+                    avatar: 1
+                  }
+                }
+              ]
+            }
+          },
+          {
+            $addFields:{
+              owner:{
+                $first: "$owner" //we are getting the first element of the owner array which is the owner of the current video
+                //we are doing this because we currently have watchHistory which is a array,inside this a video object , inside this object we have owner field which was a array and inside this array there is an object of user who uploaded the video so we are getting the first owner object which is the owner of the current video
+                // previously WatchHistory(array)->Video(Object)->Owner(Array)->User(object)
+                // now WatchHistory(array)->Video(Object)->Owner(object)
+              }
+            }
+          }
+        ]
+      }
+      //here we are telling like get all the video objects from video collection whose _id matches with the video _ids stored in the watchHistory field of the current user
+    }
+  ]
+
+
+  return res
+ .status(200)
+ .json(
+    new ApiResponce(
+      200,
+      user[0].watchHistory,
+      "User watch history fetched successfully"
+    ))
+})
+
+
+
+
 
 export {
   registerUser,
