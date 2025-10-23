@@ -379,9 +379,58 @@ const deletePlaylist = asyncHandler(async (req, res) => {
 });
 
 const updatePlaylist = asyncHandler(async (req, res) => {
+
+  //TODO: update playlist
+
+  // check is data updated or not 
+  
   const { playlistId } = req.params;
   const { name, description } = req.body;
-  //TODO: update playlist
+
+  if(!isValidObjectId(playlistId)){
+    throw new ApiError(400, "invalid playlist id ")
+  }
+
+  if(!name && !description){
+    throw new ApiError(400, "either of name or description required")
+  }
+
+  const playlist = await Playlist.findById(playlistId)
+
+  if(!playlist){
+    throw new ApiError(404, "Playlist not found")
+  }
+  
+  if(playlist.owner.toString()!==req.user._id.toString()){
+    throw new ApiError(403, "user is not authorized to change the playlist ")
+  }
+
+  const updateOptions = {}
+  if(name) updateOptions.name = name
+  if(description) updateOptions.description = description
+
+  const updatedPlaylist = await Playlist.findByIdAndUpdate(
+    playlistId,
+    { $set:{...updateOptions} },
+    { new:true }
+  )
+
+  if(!updatedPlaylist){
+    throw new ApiError(500,"something went wrong while updating the playlist")
+  }
+
+
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(
+      200,
+      updatedPlaylist,
+      "Playlist updated successfully"
+    )
+  )
+
+
 });
 
 export {
